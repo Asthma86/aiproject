@@ -1,9 +1,7 @@
-// src/pages/Index.tsx
-import { useState } from "react"; 
-import type { Chat, Message } from "@/types/chat"; 
+import type { AttachedFile } from "@/components/chat/AttachmentPanel";
+import { useState, useRef, useEffect } from "react";
 import Sidebar from "@/components/chat/Sidebar";
 import ChatArea from "@/components/chat/ChatArea";
-
 
 export interface Chat {
   id: string;
@@ -17,6 +15,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   createdAt: Date;
+  attachments?: AttachedFile[];
 }
 
 export default function Index() {
@@ -44,15 +43,17 @@ export default function Index() {
     setActiveChatId(newChat.id);
   };
 
-  const sendMessage = (content: string) => {
-    if (!content.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: content.trim(),
-      createdAt: new Date(),
-    };
+  const sendMessage = (content: string, files: AttachedFile[] = []) => {
+  if (!content.trim() && files.length === 0) return;
+  console.log("📥 Получили файлы:", files.length);
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    role: "user",
+    content: content.trim(),
+    createdAt: new Date(),
+    attachments: files.length > 0 ? files : undefined, 
+  };
+  console.log("💾 Сообщение создано:", userMessage);
 
     const mockResponses = [
       "Я — языковая модель на основе искусственного интеллекта. Могу отвечать на вопросы, помогать с текстами, кодом, анализом данных и многим другим.",
