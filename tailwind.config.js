@@ -6,11 +6,9 @@ export default {
   ],
   theme: {
     extend: {
-      
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
-        
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
@@ -42,8 +40,6 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        
-       
         chat: {
           sidebar: 'hsl(var(--chat-sidebar))',
           main: 'hsl(var(--chat-main))',
@@ -60,6 +56,73 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // === НАШИ КАСТОМНЫЕ АНИМАЦИИ ===
+      keyframes: {
+        slideInRight: {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0)' },
+        },
+        fadeInMessage: {
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeInBg: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        popUpPanel: {
+          from: { opacity: '0', transform: 'translateY(15px) scale(0.98)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        fadeSlideUp: {
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        iconPop: {
+          from: { opacity: '0', transform: 'scale(0.5) rotate(-10deg)' },
+          to: { opacity: '1', transform: 'scale(1) rotate(0)' },
+        },
+        slideInChat: {
+          from: { opacity: '0', transform: 'translateX(-20px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
+        slideOutChat: {
+          from: { opacity: '1', transform: 'translateX(0) scale(1)', maxHeight: '50px', marginBottom: '0.25rem' },
+          to: { opacity: '0', transform: 'translateX(-20px) scale(0.9)', maxHeight: '0', marginBottom: '0', padding: '0', border: 'none' },
+        },
+        popInMenu: {
+          from: { opacity: '0', transform: 'scale(0.95) translateY(-5px)' },
+          to: { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        popOutPanel: {
+          from: { opacity: '1', transform: 'translateY(0) scale(1)' },
+          to: { opacity: '0', transform: 'translateY(15px) scale(0.98)' },
+        },
+        slideOutImg: {
+          '0%': { opacity: '1', transform: 'scale(1)', width: '5rem' },
+          '40%': { opacity: '0', transform: 'scale(0.8)', width: '5rem' },
+          '100%': { opacity: '0', transform: 'scale(0.5)', width: '0', marginRight: '-0.5rem', padding: '0', border: 'none' },
+        },
+        slideOutFile: {
+          '0%': { opacity: '1', transform: 'translateX(0)', maxHeight: '50px', paddingTop: '0.5rem', paddingBottom: '0.5rem' },
+          '40%': { opacity: '0', transform: 'translateX(-10px)', maxHeight: '50px', paddingTop: '0.5rem', paddingBottom: '0.5rem' },
+          '100%': { opacity: '0', transform: 'translateX(-10px)', maxHeight: '0', paddingTop: '0', paddingBottom: '0', borderColor: 'transparent', overflow: 'hidden' },
+        }
+      },
+      animation: {
+        'drawer': 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'message': 'fadeInMessage 0.3s ease-out forwards',
+        'bg': 'fadeInBg 0.3s ease-out forwards',
+        'panel': 'popUpPanel 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'fade-slide': 'fadeSlideUp 0.3s ease-out forwards',
+        'icon': 'iconPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+        'chat-enter': 'slideInChat 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'chat-exit': 'slideOutChat 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'menu': 'popInMenu 0.2s ease-out forwards',
+        'panel-exit': 'popOutPanel 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'img-exit': 'slideOutImg 0.3s ease-out forwards',
+        'file-exit': 'slideOutFile 0.3s ease-out forwards',
+      }
     },
   },
   plugins: [],

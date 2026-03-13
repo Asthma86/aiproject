@@ -4,6 +4,12 @@ import { useState } from "react";
 import Sidebar from "@/components/chat/Sidebar";
 import ChatArea from "@/components/chat/ChatArea";
 
+export interface Source {
+  id: string;
+  title: string;
+  url?: string;
+}
+
 export interface Chat {
   id: string;
   title: string;
@@ -17,6 +23,7 @@ export interface Message {
   content: string;
   createdAt: Date;
   attachments?: AttachedFile[];
+  sources?: Source[];
 }
 
 export default function Index() {
@@ -30,8 +37,6 @@ export default function Index() {
   ]);
   const [activeChatId, setActiveChatId] = useState("1");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  
-  // ДОБАВИЛИ СОСТОЯНИЕ: ждем ли мы ответ от нейросети
   const [isGenerating, setIsGenerating] = useState(false);
 
   const activeChat = chats.find((c) => c.id === activeChatId) ?? chats[0];
@@ -47,12 +52,10 @@ export default function Index() {
     setActiveChatId(newChat.id);
   };
 
-  // ЛОГИКА УДАЛЕНИЯ ЧАТА
   const deleteChat = (idToDelete: string) => {
     setChats((prev) => {
       const filtered = prev.filter((chat) => chat.id !== idToDelete);
       
-      // Если удалили все чаты, создаем новый пустой, чтобы интерфейс не сломался
       if (filtered.length === 0) {
         const newChat: Chat = {
           id: Date.now().toString(),
@@ -64,7 +67,6 @@ export default function Index() {
         return [newChat];
       }
 
-      // Если удалили активный чат, переключаемся на соседний
       if (idToDelete === activeChatId) {
         setActiveChatId(filtered[0].id);
       }
@@ -73,7 +75,6 @@ export default function Index() {
     });
   };
 
-  // ЛОГИКА ПЕРЕИМЕНОВАНИЯ ЧАТА
   const renameChat = (id: string, newTitle: string) => {
     setChats((prev) =>
       prev.map((chat) => (chat.id === id ? { ...chat, title: newTitle } : chat))
@@ -91,16 +92,23 @@ export default function Index() {
       attachments: files.length > 0 ? files : undefined, 
     };
 
-    // 1. Сначала добавляем в чат ТОЛЬКО сообщение пользователя
     setChats((prev) =>
       prev.map((chat) => {
         if (chat.id === activeChatId) {
           const isFirst = chat.messages.length === 0;
+          
+          let newTitle = chat.title;
+          if (isFirst) {
+            if (content.trim()) {
+              newTitle = content.trim().slice(0, 40) + (content.length > 40 ? "…" : "");
+            } else if (files.length > 0) {
+              newTitle = files[0].name.slice(0, 40) + (files[0].name.length > 40 ? "…" : "");
+            }
+          }
+
           return {
             ...chat,
-            title: isFirst
-              ? content.trim().slice(0, 40) + (content.length > 40 ? "…" : "")
-              : chat.title,
+            title: newTitle,
             messages: [...chat.messages, userMessage],
           };
         }
@@ -108,16 +116,23 @@ export default function Index() {
       })
     );
 
-    // 2. Включаем режим ожидания (показываем галочку на кнопке)
     setIsGenerating(true);
 
-    // 3. Имитируем задержку (раздумья нейросети) - 1.5 секунды
     setTimeout(() => {
       const mockResponses = [
-        "Я — языковая модель на основе искусственного интеллекта. Могу отвечать на вопросы, помогать с текстами, кодом, анализом данных и многим другим.",
-        "Отличный вопрос! Я могу помочь вам с широким спектром задач — от написания текстов до решения сложных технических задач.",
-        "Я готов помочь вам! Расскажите подробнее, что именно вас интересует?",
-        "Понял вас. Давайте разберём это вместе. Что именно вы хотите узнать или сделать?",
+        "Я проанализировал отправленные вами данные. Чем еще могу помочь?",
+        "Отличный материал! Давайте разберем его подробнее.",
+        "Готово. Я ознакомился с документом, задавайте вопросы.",
+      ];
+
+      // ВОТ ТУТ Я ВЕРНУЛ 6 ИСТОЧНИКОВ:
+      const mockSources: Source[] = [
+        { id: "s1", title: "API_Documentation_v2.pdf" },
+        { id: "s2", title: "wiki.confluence.com/rag-setup", url: "https://example.com" },
+        { id: "s3", title: "user_guide_final_draft.docx" },
+        { id: "s4", title: "Архитектура_БД_v3.pdf" },
+        { id: "s5", title: "github.com/backend/auth", url: "https://github.com" },
+        { id: "s6", title: "Инструкция по деплою.txt" },
       ];
 
       const assistantMessage: Message = {
@@ -125,6 +140,7 @@ export default function Index() {
         role: "assistant",
         content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
         createdAt: new Date(),
+        sources: mockSources, // Передаем все 6, чтобы появилась кнопка "+3 еще"
       };
 
       setChats((prev) =>
@@ -139,16 +155,15 @@ export default function Index() {
         })
       );
 
-      // 4. Отключаем режим ожидания (возвращаем стрелочку)
       setIsGenerating(false);
-    }, 1500); // 1500 миллисекунд = 1.5 секунды
+    }, 1500);
   };
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[#1A1A2E]">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-10 bg-black/50 md:hidden"
+          className="fixed inset-0 z-10 bg-black/40 backdrop-blur-sm md:hidden animate-bg"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -172,7 +187,7 @@ export default function Index() {
         onSendMessage={sendMessage}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         sidebarOpen={sidebarOpen}
-        isGenerating={isGenerating} // Передаем пропс в ChatArea
+        isGenerating={isGenerating}
       />
     </div>
   );
