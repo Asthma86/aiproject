@@ -1,5 +1,6 @@
+// src/pages/Index.tsx
 import type { AttachedFile } from "@/components/chat/AttachmentPanel";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Sidebar from "@/components/chat/Sidebar";
 import ChatArea from "@/components/chat/ChatArea";
 
@@ -43,17 +44,49 @@ export default function Index() {
     setActiveChatId(newChat.id);
   };
 
-  const sendMessage = (content: string, files: AttachedFile[] = []) => {
-  if (!content.trim() && files.length === 0) return;
-  console.log("📥 Получили файлы:", files.length);
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    role: "user",
-    content: content.trim(),
-    createdAt: new Date(),
-    attachments: files.length > 0 ? files : undefined, 
+  // ЛОГИКА УДАЛЕНИЯ ЧАТА
+  const deleteChat = (idToDelete: string) => {
+    setChats((prev) => {
+      const filtered = prev.filter((chat) => chat.id !== idToDelete);
+      
+      // Если удалили все чаты, создаем новый пустой, чтобы интерфейс не сломался
+      if (filtered.length === 0) {
+        const newChat: Chat = {
+          id: Date.now().toString(),
+          title: "New chat",
+          messages: [],
+          createdAt: new Date(),
+        };
+        setActiveChatId(newChat.id);
+        return [newChat];
+      }
+
+      // Если удалили активный чат, переключаемся на соседний
+      if (idToDelete === activeChatId) {
+        setActiveChatId(filtered[0].id);
+      }
+      
+      return filtered;
+    });
   };
-  console.log("💾 Сообщение создано:", userMessage);
+
+  // ЛОГИКА ПЕРЕИМЕНОВАНИЯ ЧАТА
+  const renameChat = (id: string, newTitle: string) => {
+    setChats((prev) =>
+      prev.map((chat) => (chat.id === id ? { ...chat, title: newTitle } : chat))
+    );
+  };
+
+  const sendMessage = (content: string, files: AttachedFile[] = []) => {
+    if (!content.trim() && files.length === 0) return;
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: content.trim(),
+      createdAt: new Date(),
+      attachments: files.length > 0 ? files : undefined, 
+    };
 
     const mockResponses = [
       "Я — языковая модель на основе искусственного интеллекта. Могу отвечать на вопросы, помогать с текстами, кодом, анализом данных и многим другим.",
@@ -88,7 +121,6 @@ export default function Index() {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[#1A1A2E]">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-10 bg-black/50 md:hidden"
@@ -104,6 +136,8 @@ export default function Index() {
           setSidebarOpen(false);
         }}
         onNewChat={createNewChat}
+        onDeleteChat={deleteChat} // Передаем функцию удаления
+        onRenameChat={renameChat} // Передаем функцию переименования
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
