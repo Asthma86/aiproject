@@ -1,4 +1,3 @@
-// src/components/chat/ChatArea.tsx
 import { useState, useRef, useEffect, useCallback } from "react";
 import { type Chat } from "@/pages/Index";
 import MessageBubble from "./MessageBubble";
@@ -9,6 +8,7 @@ interface ChatAreaProps {
   onSendMessage: (content: string, files?: AttachedFile[]) => void; 
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
+  isGenerating?: boolean; // Вот он, наш спасительный пропс!
 }
 
 export default function ChatArea({
@@ -16,6 +16,7 @@ export default function ChatArea({
   onSendMessage,
   onToggleSidebar,
   sidebarOpen,
+  isGenerating = false,
 }: ChatAreaProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
@@ -24,11 +25,11 @@ export default function ChatArea({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Скроллим вниз при новых сообщениях ИЛИ когда начинается генерация ответа
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat.messages]);
+  }, [chat.messages, isGenerating]);
 
-  // Clean up preview URLs when component unmounts
   useEffect(() => {
     return () => {
       attachments.forEach((f) => {
@@ -39,6 +40,7 @@ export default function ChatArea({
 
   const handleSend = () => {
     if (!input.trim() && attachments.length === 0) return;
+    if (isGenerating) return; // Блокируем спам во время генерации
     
     onSendMessage(input, attachments); 
     
@@ -58,16 +60,13 @@ export default function ChatArea({
   };
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-  setInput(e.target.value);
-  e.target.style.height = "auto";
-  e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
-};
+    setInput(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+  };
 
   const handleAttachClick = () => {
-    // Всегда открываем выбор файлов, независимо от количества прикреплённых
     fileInputRef.current?.click();
-    
-    // Если панель была закрыта — открываем её
     if (!panelOpen) {
       setPanelOpen(true);
     }
@@ -120,7 +119,6 @@ export default function ChatArea({
 
   return (
     <div className="flex-1 flex flex-col h-full min-w-0 bg-[#1A1A2E]">
-      {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-center relative h-[79px] bg-[#1A1A2E] shadow-[2px_4px_4px_rgba(0,0,0,0.30)] z-10">
         <button
           onClick={onToggleSidebar}
@@ -139,7 +137,6 @@ export default function ChatArea({
         </h1>
       </div>
 
-      {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-10">
         {chat.messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -163,15 +160,30 @@ export default function ChatArea({
             {chat.messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
+            
+            {/* АНИМАЦИЯ ПЕЧАТИ (Прыгающие точки) */}
+            {isGenerating && (
+              <div className="flex w-full mt-2 gap-3 max-w-3xl mx-auto animate-in fade-in duration-300">
+                <div className="w-8 h-8 rounded-full bg-[#6C5CE7]/20 flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H5.17L4 17.17V4H20V16Z" fill="#6C5CE7"/>
+                  </svg>
+                </div>
+                <div className="flex items-center gap-1.5 bg-[#2D2D3F] px-4 py-3 rounded-2xl rounded-tl-sm w-fit shadow-sm">
+                  <div className="w-2 h-2 bg-[#8D8D99] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-[#8D8D99] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-[#8D8D99] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
-      {/* Bottom bar */}
       <div className="flex-shrink-0 bg-[#2D2D3F] px-4 py-4 md:px-6">
         <div className="max-w-3xl mx-auto">
-          {/* Attachment panel (shown above input when files attached) */}
           {panelOpen && attachments.length > 0 && (
             <div className="mb-2">
               <AttachmentPanel
@@ -184,7 +196,6 @@ export default function ChatArea({
           )}
 
           <div className="flex items-end gap-3">
-            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -194,7 +205,6 @@ export default function ChatArea({
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
             />
 
-            {/* Add file / toggle panel button */}
             <button
               onClick={handleAttachClick}
               data-attach-trigger
@@ -209,7 +219,6 @@ export default function ChatArea({
               )}
             </button>
 
-            {/* Input */}
             <div className="flex-1 bg-[#3A3A4A] rounded-lg px-4 py-2 min-h-[40px] flex items-end">
               <textarea
                 ref={textareaRef}
@@ -222,19 +231,28 @@ export default function ChatArea({
               />
             </div>
 
-            {/* Send button */}
             <button
               onClick={handleSend}
-              disabled={!canSend}
-              className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-[#6C5CE7] hover:bg-[#7D6EF0] active:bg-[#5B4DD6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              disabled={!canSend && !isGenerating}
+              className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 ${
+                isGenerating 
+                  ? "bg-[#6C5CE7] cursor-default opacity-100" 
+                  : "bg-[#6C5CE7] hover:bg-[#7D6EF0] active:bg-[#5B4DD6] disabled:opacity-40 disabled:cursor-not-allowed"
+              }`}
               aria-label="Send message"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 4L11.2929 3.29289L12 2.58579L12.7071 3.29289L12 4ZM13 19C13 19.5523 12.5523 20 12 20C11.4477 20 11 19.5523 11 19L12 19L13 19ZM6 10L5.29289 9.29289L11.2929 3.29289L12 4L12.7071 4.70711L6.70711 10.7071L6 10ZM12 4L12.7071 3.29289L18.7071 9.29289L18 10L17.2929 10.7071L11.2929 4.70711L12 4ZM12 4L13 4L13 19L12 19L11 19L11 4L12 4Z"
-                  fill="#33363F"
-                />
-              </svg>
+              {isGenerating ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#33363F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-in zoom-in duration-200">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="animate-in zoom-in duration-200">
+                  <path
+                    d="M12 4L11.2929 3.29289L12 2.58579L12.7071 3.29289L12 4ZM13 19C13 19.5523 12.5523 20 12 20C11.4477 20 11 19.5523 11 19L12 19L13 19ZM6 10L5.29289 9.29289L11.2929 3.29289L12 4L12.7071 4.70711L6.70711 10.7071L6 10ZM12 4L12.7071 3.29289L18.7071 9.29289L18 10L17.2929 10.7071L11.2929 4.70711L12 4ZM12 4L13 4L13 19L12 19L11 19L11 4L12 4Z"
+                    fill="#33363F"
+                  />
+                </svg>
+              )}
             </button>
           </div>
         </div>

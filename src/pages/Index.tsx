@@ -30,6 +30,9 @@ export default function Index() {
   ]);
   const [activeChatId, setActiveChatId] = useState("1");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // ДОБАВИЛИ СОСТОЯНИЕ: ждем ли мы ответ от нейросети
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const activeChat = chats.find((c) => c.id === activeChatId) ?? chats[0];
 
@@ -88,20 +91,7 @@ export default function Index() {
       attachments: files.length > 0 ? files : undefined, 
     };
 
-    const mockResponses = [
-      "Я — языковая модель на основе искусственного интеллекта. Могу отвечать на вопросы, помогать с текстами, кодом, анализом данных и многим другим.",
-      "Отличный вопрос! Я могу помочь вам с широким спектром задач — от написания текстов до решения сложных технических задач.",
-      "Я готов помочь вам! Расскажите подробнее, что именно вас интересует?",
-      "Понял вас. Давайте разберём это вместе. Что именно вы хотите узнать или сделать?",
-    ];
-
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
-      createdAt: new Date(),
-    };
-
+    // 1. Сначала добавляем в чат ТОЛЬКО сообщение пользователя
     setChats((prev) =>
       prev.map((chat) => {
         if (chat.id === activeChatId) {
@@ -111,12 +101,47 @@ export default function Index() {
             title: isFirst
               ? content.trim().slice(0, 40) + (content.length > 40 ? "…" : "")
               : chat.title,
-            messages: [...chat.messages, userMessage, assistantMessage],
+            messages: [...chat.messages, userMessage],
           };
         }
         return chat;
       })
     );
+
+    // 2. Включаем режим ожидания (показываем галочку на кнопке)
+    setIsGenerating(true);
+
+    // 3. Имитируем задержку (раздумья нейросети) - 1.5 секунды
+    setTimeout(() => {
+      const mockResponses = [
+        "Я — языковая модель на основе искусственного интеллекта. Могу отвечать на вопросы, помогать с текстами, кодом, анализом данных и многим другим.",
+        "Отличный вопрос! Я могу помочь вам с широким спектром задач — от написания текстов до решения сложных технических задач.",
+        "Я готов помочь вам! Расскажите подробнее, что именно вас интересует?",
+        "Понял вас. Давайте разберём это вместе. Что именно вы хотите узнать или сделать?",
+      ];
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
+        createdAt: new Date(),
+      };
+
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id === activeChatId) {
+            return {
+              ...chat,
+              messages: [...chat.messages, assistantMessage],
+            };
+          }
+          return chat;
+        })
+      );
+
+      // 4. Отключаем режим ожидания (возвращаем стрелочку)
+      setIsGenerating(false);
+    }, 1500); // 1500 миллисекунд = 1.5 секунды
   };
 
   return (
@@ -136,8 +161,8 @@ export default function Index() {
           setSidebarOpen(false);
         }}
         onNewChat={createNewChat}
-        onDeleteChat={deleteChat} // Передаем функцию удаления
-        onRenameChat={renameChat} // Передаем функцию переименования
+        onDeleteChat={deleteChat}
+        onRenameChat={renameChat}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -147,6 +172,7 @@ export default function Index() {
         onSendMessage={sendMessage}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         sidebarOpen={sidebarOpen}
+        isGenerating={isGenerating} // Передаем пропс в ChatArea
       />
     </div>
   );
