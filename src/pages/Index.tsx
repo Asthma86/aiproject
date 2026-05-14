@@ -10,11 +10,14 @@ export interface Source {
   url?: string;
 }
 
+export type AppMode = "chat" | "generator";
+
 export interface Chat {
   id: string;
   title: string;
   messages: Message[];
   createdAt: Date;
+  mode: AppMode;
 }
 
 export interface Message {
@@ -27,26 +30,57 @@ export interface Message {
 }
 
 export default function Index() {
+  const [activeMode, setActiveMode] = useState<AppMode>("chat");
+
   const [chats, setChats] = useState<Chat[]>([
     {
       id: "1",
       title: "New chat",
       messages: [],
       createdAt: new Date(),
+      mode: "chat",
+    },
+    {
+      id: "2",
+      title: "New statement",
+      messages: [],
+      createdAt: new Date(),
+      mode: "generator",
     },
   ]);
+  
   const [activeChatId, setActiveChatId] = useState("1");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const activeChat = chats.find((c) => c.id === activeChatId) ?? chats[0];
+  const currentModeChats = chats.filter((c) => c.mode === activeMode);
+  const activeChat = currentModeChats.find((c) => c.id === activeChatId) ?? currentModeChats[0];
+
+  const handleModeChange = (newMode: AppMode) => {
+    setActiveMode(newMode);
+    const modeChats = chats.filter((c) => c.mode === newMode);
+    if (modeChats.length > 0) {
+      setActiveChatId(modeChats[0].id);
+    } else {
+      const newChat: Chat = {
+        id: Date.now().toString(),
+        title: newMode === "chat" ? "New chat" : "New statement",
+        messages: [],
+        createdAt: new Date(),
+        mode: newMode,
+      };
+      setChats((prev) => [newChat, ...prev]);
+      setActiveChatId(newChat.id);
+    }
+  };
 
   const createNewChat = () => {
     const newChat: Chat = {
       id: Date.now().toString(),
-      title: "New chat",
+      title: activeMode === "chat" ? "New chat" : "New statement",
       messages: [],
       createdAt: new Date(),
+      mode: activeMode,
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
@@ -55,20 +89,22 @@ export default function Index() {
   const deleteChat = (idToDelete: string) => {
     setChats((prev) => {
       const filtered = prev.filter((chat) => chat.id !== idToDelete);
+      const remainingInMode = filtered.filter((chat) => chat.mode === activeMode);
       
-      if (filtered.length === 0) {
+      if (remainingInMode.length === 0) {
         const newChat: Chat = {
           id: Date.now().toString(),
-          title: "New chat",
+          title: activeMode === "chat" ? "New chat" : "New statement",
           messages: [],
           createdAt: new Date(),
+          mode: activeMode,
         };
         setActiveChatId(newChat.id);
-        return [newChat];
+        return [...filtered, newChat];
       }
 
       if (idToDelete === activeChatId) {
-        setActiveChatId(filtered[0].id);
+        setActiveChatId(remainingInMode[0].id);
       }
       
       return filtered;
@@ -81,7 +117,7 @@ export default function Index() {
     );
   };
 
-  const sendMessage = (content: string, files: AttachedFile[] = []) => {
+  const sendMessage = async (content: string, files: AttachedFile[] = []) => {
     if (!content.trim() && files.length === 0) return;
     
     const userMessage: Message = {
@@ -96,7 +132,6 @@ export default function Index() {
       prev.map((chat) => {
         if (chat.id === activeChatId) {
           const isFirst = chat.messages.length === 0;
-          
           let newTitle = chat.title;
           if (isFirst) {
             if (content.trim()) {
@@ -105,7 +140,6 @@ export default function Index() {
               newTitle = files[0].name.slice(0, 40) + (files[0].name.length > 40 ? "…" : "");
             }
           }
-
           return {
             ...chat,
             title: newTitle,
@@ -118,49 +152,78 @@ export default function Index() {
 
     setIsGenerating(true);
 
-    setTimeout(() => {
-      const mockResponses = [
-        "Я проанализировал отправленные вами данные. Чем еще могу помочь?",
-        "Отличный материал! Давайте разберем его подробнее.",
-        "Готово. Я ознакомился с документом, задавайте вопросы.",
-      ];
+    try {
 
-      // ВОТ ТУТ Я ВЕРНУЛ 6 ИСТОЧНИКОВ:
-      const mockSources: Source[] = [
-        { id: "s1", title: "API_Documentation_v2.pdf" },
-        { id: "s2", title: "wiki.confluence.com/rag-setup", url: "https://example.com" },
-        { id: "s3", title: "user_guide_final_draft.docx" },
-        { id: "s4", title: "Архитектура_БД_v3.pdf" },
-        { id: "s5", title: "github.com/backend/auth", url: "https://github.com" },
-        { id: "s6", title: "Инструкция по деплою.txt" },
-      ];
+      const webhookUrl = activeChat.mode === "generator" 
+        ? import.meta.env.VITE_N8N_WEBHOOK_GENERATOR
+        : import.meta.env.VITE_N8N_WEBHOOK_CHAT;
+
+      // Защита от запуска приложения без настроенного .env
+      if (!webhookUrl) {
+        throw new Error(`CRITICAL: В файле .env не указана ссылка для режима: ${activeChat.mode}`);
+      }
+
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: activeChatId,
+          mode: activeChat.mode,
+          message: content.trim(),
+          files: files.map(f => ({ name: f.name, type: f.type, size: f.size }))
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+
+      const data = await response.json();
+      const aiContent = data.output || data.text || data.response || data.message || JSON.stringify(data);
+      const aiSources = data.sources || [];
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
+        content: aiContent,
         createdAt: new Date(),
-        sources: mockSources, // Передаем все 6, чтобы появилась кнопка "+3 еще"
+        sources: aiSources,
       };
 
       setChats((prev) =>
         prev.map((chat) => {
           if (chat.id === activeChatId) {
-            return {
-              ...chat,
-              messages: [...chat.messages, assistantMessage],
-            };
+            return { ...chat, messages: [...chat.messages, assistantMessage] };
           }
           return chat;
         })
       );
-
+    } catch (error) {
+      console.error("Системная ошибка:", error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Произошла ошибка при обработке запроса. Пожалуйста, обратитесь к администратору или проверьте конфигурацию сервера.",
+        createdAt: new Date(),
+      };
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id === activeChatId) {
+            return { ...chat, messages: [...chat.messages, errorMessage] };
+          }
+          return chat;
+        })
+      );
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
+  const inputPlaceholder = activeMode === "generator" 
+    ? "Напишите или загрузите заявление" 
+    : "Что ты умеешь?";
+
   return (
-    <div className="flex h-full w-full overflow-hidden bg-[#1A1A2E]">
+    <div className="flex h-full w-full overflow-hidden bg-background">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-10 bg-black/40 backdrop-blur-sm md:hidden animate-bg"
@@ -169,8 +232,10 @@ export default function Index() {
       )}
 
       <Sidebar
-        chats={chats}
+        chats={currentModeChats}
         activeChatId={activeChatId}
+        activeMode={activeMode}
+        onModeChange={handleModeChange}
         onSelectChat={(id) => {
           setActiveChatId(id);
           setSidebarOpen(false);
@@ -179,15 +244,14 @@ export default function Index() {
         onDeleteChat={deleteChat}
         onRenameChat={renameChat}
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
       />
 
       <ChatArea
         chat={activeChat}
         onSendMessage={sendMessage}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
-        sidebarOpen={sidebarOpen}
         isGenerating={isGenerating}
+        placeholder={inputPlaceholder}
       />
     </div>
   );

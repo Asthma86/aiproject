@@ -7,7 +7,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: 'hsl(var(--background))',
+        // === НАШИ НОВЫЕ СЕМАНТИЧЕСКИЕ ЦВЕТА ДЛЯ ЧАТА ===
+        background: '#1A1A2E', 
+        surface: '#1E1E2E',    
+        panel: '#2D2D3F',      
+        input: '#2A2A3A',      
+        
+        divider: {
+          DEFAULT: '#3A3A4A',
+          hover: '#444453',
+        },
+        
+        primary: {
+          DEFAULT: '#6C5CE7',
+          foreground: 'hsl(var(--primary-foreground))', // Оставили для совместимости с shadcn
+          hover: '#7D6EF0',
+          active: '#5B4DD6',
+        },
+        
+        content: {
+          DEFAULT: '#F7F7FF',
+          secondary: '#E0E0E0',
+          tertiary: '#B8B8C0',
+          muted: '#8D8D99',
+          dark: '#33363F',
+        },
+        
+        danger: '#FF6B6B',
+
+        // === СИСТЕМНЫЕ ЦВЕТА (Оставлены для совместимости с другими UI-компонентами) ===
         foreground: 'hsl(var(--foreground))',
         card: {
           DEFAULT: 'hsl(var(--card))',
@@ -17,16 +45,12 @@ export default {
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
         },
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
+          DEFAULT: 'hsl(var(--muted))', // Встроенный muted от UI-библиотеки
           foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
@@ -38,7 +62,6 @@ export default {
           foreground: 'hsl(var(--destructive-foreground))',
         },
         border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         chat: {
           sidebar: 'hsl(var(--chat-sidebar))',
@@ -56,7 +79,7 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
-      // === НАШИ КАСТОМНЫЕ АНИМАЦИИ ===
+      // === НАШИ КАСТОМНЫЕ АНИМАЦИИ (без изменений) ===
       keyframes: {
         slideInRight: {
           from: { transform: 'translateX(100%)' },
@@ -72,7 +95,7 @@ export default {
         },
         popUpPanel: {
           from: { opacity: '0', transform: 'translateY(15px) scale(0.98)' },
-          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+          to: { transform: 'translateY(0) scale(1)' },
         },
         fadeSlideUp: {
           from: { opacity: '0', transform: 'translateY(10px)' },
