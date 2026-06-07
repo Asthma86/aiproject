@@ -1,6 +1,7 @@
 // src/components/chat/MessageBubble.tsx
 import type { Message, Source } from "@/pages/Index";
-import { IconBot, IconBook, IconFile } from "@/components/Icons";
+import { IconBot, IconBook, IconFile, IconCopy, IconCheck } from "@/components/Icons";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -14,6 +15,9 @@ const MAX_SOURCES_TO_SHOW = 3;
 export default function MessageBubble({ message, onOpenSources }: MessageBubbleProps) {
   const isUser = message.role === "user";
   
+  // Локальный стейт для управления визуальным фидбеком копирования
+  const [isCopied, setIsCopied] = useState(false);
+  
   const sources = message.sources || [];
   const attachments = message.attachments || [];
   
@@ -25,6 +29,23 @@ export default function MessageBubble({ message, onOpenSources }: MessageBubbleP
     hour: '2-digit', 
     minute: '2-digit' 
   });
+
+  // Best practice: асинхронная функция копирования с обработкой ошибок и таймером
+  const handleCopy = async () => {
+    if (!message.content) return;
+    
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setIsCopied(true);
+      
+      // Возвращаем кнопку в исходное состояние через 2 секунды
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch (err) {
+      console.error("Не удалось скопировать текст: ", err);
+    }
+  };
 
   return (
     <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"} mb-6 animate-message`}>
@@ -74,7 +95,7 @@ export default function MessageBubble({ message, onOpenSources }: MessageBubbleP
           </div>
         )}
 
-        <div className={`px-5 py-3.5 rounded-2xl shadow-sm text-[15px] leading-relaxed ${isUser ? "bg-primary text-white rounded-br-sm" : "bg-panel text-content rounded-tl-sm border border-divider"}`}>
+        <div className={`px-5 py-3.5 rounded-2xl shadow-sm text-[15px] leading-relaxed ${isUser ? "bg-primary text-white rounded-br-sm min-w-[160px]" : "bg-panel text-content rounded-tl-sm border border-divider w-full"}`}>
           {attachments.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {attachments.map((file) => {
@@ -141,8 +162,36 @@ export default function MessageBubble({ message, onOpenSources }: MessageBubbleP
             )
           )}
           
-          <div className={`text-[11px] mt-2 font-medium flex ${isUser ? "justify-end text-white/60" : "justify-start text-content-muted"}`}>
-            {timeString}
+          {/* Нижняя панель сообщения: gap-3 для отступа */}
+          <div className="mt-2 flex items-center justify-between gap-3 w-full">
+            <div className={`text-[11px] font-medium flex-shrink-0 ${isUser ? "text-white/60" : "text-content-muted"}`}>
+              {timeString}
+            </div>
+            
+            {message.content && (
+              <button
+                onClick={handleCopy}
+                className={`flex items-center justify-center gap-1.5 px-2 py-1 -mr-2 rounded text-[11px] font-semibold transition-all ${
+                  isUser 
+                    ? "text-white/70 hover:text-white hover:bg-white/10" 
+                    : "text-content-muted hover:text-content hover:bg-surface"
+                }`}
+                title="Скопировать сообщение"
+                aria-label="Скопировать сообщение"
+              >
+                {isCopied ? (
+                  <>
+                    <IconCheck size={14} className="text-green-500" />
+                    <span className="text-green-500">Скопировано</span>
+                  </>
+                ) : (
+                  <>
+                    <IconCopy size={14} />
+                    <span>Копировать</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
